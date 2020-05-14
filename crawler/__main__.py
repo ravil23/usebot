@@ -12,10 +12,10 @@ def main(cache_dir: str, output_dir: str, site: str, fipi_session_id: str, force
         crawler.load_dictionaries()
 
         tasks_subject_russian = crawler.load_subject_russian()
-        crawler.save_subject_russian([task for task in tasks_subject_russian if len(task.options) > 0])
+        crawler.save_subject_russian([task for task in tasks_subject_russian if task.type_id == 2])
 
         tasks_subject_history = crawler.load_subject_history()
-        crawler.save_subject_history([task for task in tasks_subject_history if len(task.options) > 0])
+        crawler.save_subject_history([task for task in tasks_subject_history if task.type_id == 2])
     else:
         raise IllegalArgumentError()
 

@@ -10,11 +10,17 @@ import (
 type Subject struct {
 	Tasks []*Task `json:"tasks"`
 
-	AllThemes []string `json:"-"`
+	LowLevelTasks    []*Task  `json:"-"`
+	MediumLevelTasks []*Task  `json:"-"`
+	HighLevelTasks   []*Task  `json:"-"`
+	AllThemes        []string `json:"-"`
 }
 
 func (s *Subject) show() {
 	log.Printf("Tasks count: %d", len(s.Tasks))
+	log.Printf("Low level tasks count: %d", len(s.LowLevelTasks))
+	log.Printf("Medium level tasks count: %d", len(s.MediumLevelTasks))
+	log.Printf("High level tasks count: %d", len(s.HighLevelTasks))
 	log.Printf("Themes count: %d", len(s.AllThemes))
 	for _, theme := range s.AllThemes {
 		log.Printf("- %s", theme)
@@ -37,6 +43,22 @@ func (s *Subject) extractAllThemes() {
 	})
 }
 
+func (s *Subject) groupTasksByLevels() {
+	s.LowLevelTasks = make([]*Task, 0, len(s.Tasks))
+	s.MediumLevelTasks = make([]*Task, 0, len(s.Tasks))
+	s.HighLevelTasks = make([]*Task, 0, len(s.Tasks))
+	for _, task := range s.Tasks {
+		switch task.Level {
+		case LevelLow:
+			s.LowLevelTasks = append(s.LowLevelTasks, task)
+		case LevelMedium:
+			s.MediumLevelTasks = append(s.MediumLevelTasks, task)
+		case LevelHigh:
+			s.HighLevelTasks = append(s.HighLevelTasks, task)
+		}
+	}
+}
+
 func parseSubjectFile(path string) (*Subject, error) {
 	jsonData, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -48,6 +70,7 @@ func parseSubjectFile(path string) (*Subject, error) {
 		return nil, err
 	}
 	subject.extractAllThemes()
+	subject.groupTasksByLevels()
 	return &subject, nil
 }
 

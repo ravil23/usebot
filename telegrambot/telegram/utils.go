@@ -10,12 +10,14 @@ import (
 
 const (
 	commandSelectSubject = "Выбрать предмет"
-	commandSkip = "Пропустить"
-	commandStart = "start"
+	commandSelectLevel   = "Выбрать сложность"
+	commandSkip          = "Пропустить"
+	commandStart         = "start"
 
 	labelAnswered = "answered"
 
 	textSelectSubject = "Что поизучаем?"
+	textSelectLevel   = "Какую сложность выберем?"
 
 	subjectRussian = "Русский язык"
 	subjectHistory = "История"
@@ -26,6 +28,7 @@ const (
 )
 
 var userSelectedSubject = map[int]string{}
+var userSelectedLevel = map[int]string{}
 var userChat = map[int]int64{}
 
 func getBotTokenOrPanic() string {

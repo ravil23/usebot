@@ -10,15 +10,32 @@ import (
 
 const (
 	ExplanationPrefix = "Правильный ответ: "
-
-	LevelLow    = 1
-	LevelMedium = 2
-	LevelHigh   = 3
 )
+
+type Level int
+
+const (
+	LevelLow    = Level(1)
+	LevelMedium = Level(2)
+	LevelHigh   = Level(3)
+)
+
+func (l Level) String() string {
+	switch l {
+	case LevelLow:
+		return "Базовый"
+	case LevelMedium:
+		return "Повышенный"
+	case LevelHigh:
+		return "Высокий"
+	default:
+		return ""
+	}
+}
 
 type Task struct {
 	ID      int               `json:"id"`
-	Level   int               `json:"level"`
+	Level   Level             `json:"level"`
 	Text    string            `json:"text"`
 	Doc     string            `json:"doc"`
 	Answer  string            `json:"answer"`
@@ -43,7 +60,7 @@ func (t *Task) MakeTelegramPoll(chatID int64) *tgbotapi.SendPollConfig {
 		tgOptions = append(tgOptions, option)
 	}
 
-	tgPoll := tgbotapi.NewPoll(chatID, fmt.Sprintf("#%d\n%s", t.ID, t.Text), tgOptions...)
+	tgPoll := tgbotapi.NewPoll(chatID, fmt.Sprintf("%s\n%s", t.getTitle(), t.Text), tgOptions...)
 	tgPoll.Explanation = ExplanationPrefix + t.Options[t.Answer]
 	tgPoll.CorrectOptionID = correctOptionID
 	tgPoll.Type = "quiz"
@@ -52,7 +69,7 @@ func (t *Task) MakeTelegramPoll(chatID int64) *tgbotapi.SendPollConfig {
 }
 
 func (t *Task) MakeTelegramMessage(chatID int64) *tgbotapi.MessageConfig {
-	tgMessage := tgbotapi.NewMessage(chatID, fmt.Sprintf("<b>#%d\n%s</b>\n", t.ID, t.Text))
+	tgMessage := tgbotapi.NewMessage(chatID, fmt.Sprintf("<b>%s\n%s</b>\n", t.getTitle(), t.Text))
 	if t.Doc != "" {
 		tgMessage.Text += "\n" + t.Doc + "\n"
 	}
@@ -66,6 +83,10 @@ func (t *Task) MakeTelegramMessage(chatID int64) *tgbotapi.MessageConfig {
 	}
 	tgMessage.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(tgButtons)
 	return &tgMessage
+}
+
+func (t *Task) getTitle() string {
+	return fmt.Sprintf("#%d %s", t.ID, t.Level)
 }
 
 func (t *Task) shuffledOptionKeys() []string {
