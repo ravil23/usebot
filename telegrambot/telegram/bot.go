@@ -6,8 +6,9 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
-	"sync"
+	"syscall"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -16,56 +17,39 @@ import (
 )
 
 const (
-	retryPeriod     = time.Second
-	maxRetriesCount = 30
-	timeoutSeconds  = 60
-	listenersPoolSize = 10
-
-	commandSelectSubject = "Выбрать предмет"
-	commandSkip = "Пропустить"
-	commandStart = "start"
-
-	labelAnswered = "answered"
-
-	textSelectSubject = "Что поизучаем?"
-
-	subjectRussian = "Русский язык"
-	subjectHistory = "История"
+	initializationRetryPeriod     = time.Second
+	initializationMaxRetriesCount = 30
+	timeoutSeconds                = 60
+	listenersPoolSize             = 10
 )
 
-var userSelectedSubject = map[int]string{}
-var userChat = map[int]int64{}
-
-func GetBotTokenOrPanic() string {
-	botToken := os.Getenv("BOT_TOKEN")
-	if botToken == "" {
-		log.Panic("bot token is empty")
-	}
-	return botToken
-}
-
 type Bot struct {
+	hostName string
 	api *tgbotapi.BotAPI
 	database *entity.Database
 }
 
 func NewBot(database *entity.Database) *Bot {
+	hostName, err := os.Hostname()
+	if err != nil {
+		hostName = "unknown_host"
+	}
 	return &Bot{
+		hostName: hostName,
 		database: database,
 	}
 }
 
 func (b *Bot) Init() {
 	log.Printf("Bot is initializing...")
-	botToken := GetBotTokenOrPanic()
+	botToken := getBotTokenOrPanic()
 	rand.Seed(time.Now().UnixNano())
-	for i := 1; i <= maxRetriesCount; i++ {
+	for i := 1; i <= initializationMaxRetriesCount; i++ {
 		if api, err := tgbotapi.NewBotAPI(botToken); err != nil {
 			log.Printf("Attempt %d failed: %v", i, err)
-			time.Sleep(retryPeriod)
+			time.Sleep(initializationRetryPeriod)
 		} else {
 			b.api = api
-			log.Printf("Bot successfully initialized")
 			return
 		}
 	}
@@ -88,11 +72,11 @@ func (b *Bot) HealthCheck() {
 }
 
 func (b *Bot) Run() {
+	log.Printf("Bot is running...")
 	updateConfig := tgbotapi.NewUpdate(0)
 	updateConfig.Timeout = timeoutSeconds
 	updates := b.api.GetUpdatesChan(updateConfig)
 
-	wg:= sync.WaitGroup{}
 	listener := func () {
 		for update := range updates {
 			if update.Message != nil {
@@ -105,66 +89,58 @@ func (b *Bot) Run() {
 				continue
 			}
 		}
-		wg.Done()
 	}
 
 	for i := 0; i < listenersPoolSize; i++ {
-		wg.Add(1)
 		go listener()
 	}
-	log.Printf("Telegram listeners pool size: %d", listenersPoolSize)
-	wg.Wait()
+
+	b.serve()
+}
+
+func (b *Bot) serve() {
+	b.sendAlert(fmt.Sprintf("@%s started", botName))
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+	<-signals
+	b.sendAlert(fmt.Sprintf("@%s stopped", botName))
 }
 
 func (b *Bot) handleMessage(tgMessage *tgbotapi.Message) {
 	chatID := tgMessage.Chat.ID
-	messageID := tgMessage.MessageID
 
 	userChat[tgMessage.From.ID] = chatID
 
 	if tgMessage.Command() == commandStart {
-		b.sendStartMenu(chatID, messageID)
-		b.sendSubjectsList(chatID, messageID)
+		b.sendWithAlertOnError(b.getStartMenu(chatID))
+		b.sendWithAlertOnError(b.getSubjectsList(chatID))
+		b.sendAlert(fmt.Sprintf("%s started conversation with @%s", formatUserString(tgMessage.From), botName))
 	} else if tgMessage.Text == commandSelectSubject{
-		b.sendSubjectsList(chatID, messageID)
+		b.sendWithAlertOnError(b.getSubjectsList(chatID))
 	} else {
-		b.sendNextTask(chatID, messageID, tgMessage.From.ID)
+		b.sendNextTask(chatID, tgMessage.From.ID)
 	}
-}
-
-func (b *Bot) sendStartMenu(chatID int64, messageID int) {
-	tgChattable := b.getStartMenu(chatID)
-	if _, err := b.api.Send(tgChattable); err != nil {
-		b.sendAlert(chatID, err.Error(), messageID)
-	}
-}
-
-func (b *Bot) getStartMenu(chatID int64) tgbotapi.Chattable {
-	tgMessage := tgbotapi.NewMessage(
-		chatID,
-		fmt.Sprintf(`Выбери предмет, чтобы начать подготовку. Его всегда можно сменить, нажав на кнопку "%s".`, commandSelectSubject),
-	)
-	tgButtons := []tgbotapi.KeyboardButton{
-		tgbotapi.NewKeyboardButton(commandSelectSubject),
-		tgbotapi.NewKeyboardButton(commandSkip),
-	}
-	tgMessage.ReplyMarkup = tgbotapi.NewReplyKeyboard(tgButtons)
-	return &tgMessage
 }
 
 func (b *Bot) handleCallbackQuery(tgCallbackQuery *tgbotapi.CallbackQuery) {
 	chatID := tgCallbackQuery.Message.Chat.ID
-	messageID := tgCallbackQuery.Message.MessageID
 
 	userChat[tgCallbackQuery.From.ID] = chatID
 
 	if tgCallbackQuery.Message.Text == textSelectSubject {
 		if b.selectSubject(tgCallbackQuery) {
-			b.sendNextTask(chatID, messageID, tgCallbackQuery.From.ID)
+			b.sendNextTask(chatID, tgCallbackQuery.From.ID)
 		}
 	} else if b.updateInlineQuestion(tgCallbackQuery) {
-		b.sendNextTask(chatID, messageID, tgCallbackQuery.From.ID)
+		b.sendNextTask(chatID, tgCallbackQuery.From.ID)
 	}
+}
+
+func (b *Bot) handlePollAnswer(tgPollAnswer *tgbotapi.PollAnswer) {
+	userID := tgPollAnswer.User.ID
+	chatID := userChat[userID]
+
+	b.sendNextTask(chatID, userID)
 }
 
 func (b *Bot) selectSubject(callbackQuery *tgbotapi.CallbackQuery) bool {
@@ -176,7 +152,7 @@ func (b *Bot) selectSubject(callbackQuery *tgbotapi.CallbackQuery) bool {
 	alreadyAnswered := callbackQuery.Data == labelAnswered
 	callbackText := ""
 	if alreadyAnswered {
-		callbackText = fmt.Sprintf(`Для смены предмета, воспользуйся кнопкой "%s"`, commandSelectSubject)
+		callbackText = fmt.Sprintf(`Для смены предмета, воспользуйтесь кнопкой "%s"`, commandSelectSubject)
 	} else {
 		tgKeyboardUpdate := tgbotapi.NewEditMessageText(chatID, messageID, callbackQuery.Message.Text)
 		tgRows := make([][]tgbotapi.InlineKeyboardButton, 0, len(callbackQuery.Message.ReplyMarkup.InlineKeyboard))
@@ -197,13 +173,13 @@ func (b *Bot) selectSubject(callbackQuery *tgbotapi.CallbackQuery) bool {
 		tgKeyboard := tgbotapi.NewInlineKeyboardMarkup(tgRows...)
 		tgKeyboardUpdate.ReplyMarkup = &tgKeyboard
 		if _, err := b.api.Send(tgKeyboardUpdate); err != nil {
-			b.sendAlert(chatID, err.Error(), messageID)
+			b.sendAlert(err.Error())
 		}
 	}
 
 	tgCallback := tgbotapi.NewCallback(callbackQuery.ID, callbackText)
 	if _, err := b.api.Request(tgCallback); err != nil {
-		b.sendAlert(chatID, err.Error(), messageID)
+		b.sendAlert(err.Error())
 		return false
 	}
 	return !alreadyAnswered
@@ -271,30 +247,29 @@ func (b *Bot) updateInlineQuestion(callbackQuery *tgbotapi.CallbackQuery) bool {
 		tgKeyboard := tgbotapi.NewInlineKeyboardMarkup(tgRows...)
 		tgKeyboardUpdate.ReplyMarkup = &tgKeyboard
 		if _, err := b.api.Send(tgKeyboardUpdate); err != nil {
-			b.sendAlert(chatID, err.Error(), messageID)
+			b.sendAlert(err.Error())
 		}
 	}
 
 	tgCallback := tgbotapi.NewCallback(callbackQuery.ID,  callbackText)
 	if _, err := b.api.Request(tgCallback); err != nil {
-		b.sendAlert(chatID, err.Error(), messageID)
+		b.sendAlert(err.Error())
 		return false
 	}
 	return !alreadyAnswered
 }
 
-func (b *Bot) handlePollAnswer(tgPollAnswer *tgbotapi.PollAnswer) {
-	userID := tgPollAnswer.User.ID
-	chatID := userChat[userID]
-
-	b.sendNextTask(chatID, 0, userID)
-}
-
-func (b *Bot) sendSubjectsList(chatID int64, messageID int) {
-	tgChattable := b.getSubjectsList(chatID)
-	if _, err := b.api.Send(tgChattable); err != nil {
-		b.sendAlert(chatID, err.Error(), messageID)
+func (b *Bot) getStartMenu(chatID int64) tgbotapi.Chattable {
+	tgMessage := tgbotapi.NewMessage(
+		chatID,
+		fmt.Sprintf(`Выбери предмет, чтобы начать подготовку. Его всегда можно сменить, нажав на кнопку "%s".`, commandSelectSubject),
+	)
+	tgButtons := []tgbotapi.KeyboardButton{
+		tgbotapi.NewKeyboardButton(commandSelectSubject),
+		tgbotapi.NewKeyboardButton(commandSkip),
 	}
+	tgMessage.ReplyMarkup = tgbotapi.NewReplyKeyboard(tgButtons)
+	return &tgMessage
 }
 
 func (b *Bot) getSubjectsList(chatID int64) tgbotapi.Chattable {
@@ -306,45 +281,37 @@ func (b *Bot) getSubjectsList(chatID int64) tgbotapi.Chattable {
 	return &tgMessage
 }
 
-func (b *Bot) sendNextTask(chatID int64, messageID int, userID int) {
+func (b *Bot) sendNextTask(chatID int64, userID int) {
 	subject := userSelectedSubject[userID]
+	var task tgbotapi.Chattable
 	switch subject {
 	case subjectRussian:
-		b.sendNextRussianTask(chatID, messageID)
+		task = b.getNextTask(b.database.Russian.Tasks, chatID)
 	case subjectHistory:
-		b.sendNextHistoryTask(chatID, messageID)
+		task = b.getNextTask(b.database.History.Tasks, chatID)
 	default:
-		b.sendSubjectsList(chatID, messageID)
+		task = b.getSubjectsList(chatID)
 	}
-}
-
-func (b *Bot) sendNextRussianTask(chatID int64, messageID int) {
-	tgChattable := b.getNextTask(b.database.Russian.Tasks, chatID)
-	if _, err := b.api.Send(tgChattable); err != nil {
-		b.sendAlert(chatID, err.Error(), messageID)
-	}
-}
-
-func (b *Bot) sendNextHistoryTask(chatID int64, messageID int) {
-	tgChattable := b.getNextTask(b.database.History.Tasks, chatID)
-	if _, err := b.api.Send(tgChattable); err != nil {
-		b.sendAlert(chatID, err.Error(), messageID)
-	}
+	b.sendWithAlertOnError(task)
 }
 
 func (b *Bot) getNextTask(tasks []*entity.Task, chatID int64) tgbotapi.Chattable {
 	task := tasks[rand.Intn(len(tasks))]
-	tgPoll := task.MakeTelegramPoll(chatID)
-	if tgPoll != nil {
+	if tgPoll := task.MakeTelegramPoll(chatID); tgPoll != nil {
 		return tgPoll
 	}
 	return task.MakeTelegramMessage(chatID)
 }
 
-func (b *Bot) sendAlert(chatID int64, text string, messageID int) {
+func (b *Bot) sendWithAlertOnError(tgChattable tgbotapi.Chattable) {
+	if _, err := b.api.Send(tgChattable); err != nil {
+		b.sendAlert(err.Error())
+	}
+}
+
+func (b *Bot) sendAlert(text string) {
 	log.Print(text)
-	tgMessage := tgbotapi.NewMessage(chatID, text)
-	tgMessage.ReplyToMessageID = messageID
+	tgMessage := tgbotapi.NewMessage(alertsChatID, fmt.Sprintf("[%s] %s", b.hostName, text))
 	_, err := b.api.Send(tgMessage)
 	if err != nil {
 		log.Printf("Error on sending alert: %s", err)
