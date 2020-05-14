@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"log"
 	"os"
 
 	"github.com/ravil23/usebot/telegrambot/collection/entity"
@@ -29,8 +28,7 @@ func main() {
 	parseArguments()
 
 	database := entity.NewDatabase(russianSubjectPath, historySubjectPath)
-	log.Printf("Found Russian tasks count: %d", len(database.Russian.Tasks))
-	log.Printf("Found History tasks count: %d", len(database.History.Tasks))
+	database.Show()
 
 	bot := telegram.NewBot(database)
 	bot.Init()

@@ -25,7 +25,7 @@ const (
 
 type Bot struct {
 	hostName string
-	api *tgbotapi.BotAPI
+	api      *tgbotapi.BotAPI
 	database *entity.Database
 }
 
@@ -77,7 +77,7 @@ func (b *Bot) Run() {
 	updateConfig.Timeout = timeoutSeconds
 	updates := b.api.GetUpdatesChan(updateConfig)
 
-	listener := func () {
+	listener := func() {
 		for update := range updates {
 			if update.Message != nil {
 				b.handleMessage(update.Message)
@@ -115,7 +115,7 @@ func (b *Bot) handleMessage(tgMessage *tgbotapi.Message) {
 		b.sendWithAlertOnError(b.getStartMenu(chatID))
 		b.sendWithAlertOnError(b.getSubjectsList(chatID))
 		b.sendAlert(fmt.Sprintf("%s started conversation with @%s", formatUserString(tgMessage.From), botName))
-	} else if tgMessage.Text == commandSelectSubject{
+	} else if tgMessage.Text == commandSelectSubject {
 		b.sendWithAlertOnError(b.getSubjectsList(chatID))
 	} else {
 		b.sendNextTask(chatID, tgMessage.From.ID)
@@ -194,7 +194,7 @@ func (b *Bot) updateInlineQuestion(callbackQuery *tgbotapi.CallbackQuery) bool {
 	if callbackQuery.Data == labelAnswered {
 		alreadyAnswered = true
 		callbackText = "К сожалению изменить ответ нельзя"
-	} else if strings.HasPrefix(callbackQuery.Data, entity.ExplanationPrefix){
+	} else if strings.HasPrefix(callbackQuery.Data, entity.ExplanationPrefix) {
 		alreadyAnswered = true
 		callbackText = callbackQuery.Data
 	} else {
@@ -240,7 +240,7 @@ func (b *Bot) updateInlineQuestion(callbackQuery *tgbotapi.CallbackQuery) bool {
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData(
 					"Пояснение",
-					entity.ExplanationPrefix + correctOptionText,
+					entity.ExplanationPrefix+correctOptionText,
 				),
 			),
 		)
@@ -251,7 +251,7 @@ func (b *Bot) updateInlineQuestion(callbackQuery *tgbotapi.CallbackQuery) bool {
 		}
 	}
 
-	tgCallback := tgbotapi.NewCallback(callbackQuery.ID,  callbackText)
+	tgCallback := tgbotapi.NewCallback(callbackQuery.ID, callbackText)
 	if _, err := b.api.Request(tgCallback); err != nil {
 		b.sendAlert(err.Error())
 		return false
@@ -282,17 +282,21 @@ func (b *Bot) getSubjectsList(chatID int64) tgbotapi.Chattable {
 }
 
 func (b *Bot) sendNextTask(chatID int64, userID int) {
-	subject := userSelectedSubject[userID]
-	var task tgbotapi.Chattable
-	switch subject {
-	case subjectRussian:
-		task = b.getNextTask(b.database.Russian.Tasks, chatID)
-	case subjectHistory:
-		task = b.getNextTask(b.database.History.Tasks, chatID)
-	default:
-		task = b.getSubjectsList(chatID)
+	for {
+		subject := userSelectedSubject[userID]
+		var task tgbotapi.Chattable
+		switch subject {
+		case subjectRussian:
+			task = b.getNextTask(b.database.Russian.Tasks, chatID)
+		case subjectHistory:
+			task = b.getNextTask(b.database.History.Tasks, chatID)
+		default:
+			task = b.getSubjectsList(chatID)
+		}
+		if b.sendWithAlertOnError(task) {
+			break
+		}
 	}
-	b.sendWithAlertOnError(task)
 }
 
 func (b *Bot) getNextTask(tasks []*entity.Task, chatID int64) tgbotapi.Chattable {
@@ -303,10 +307,12 @@ func (b *Bot) getNextTask(tasks []*entity.Task, chatID int64) tgbotapi.Chattable
 	return task.MakeTelegramMessage(chatID)
 }
 
-func (b *Bot) sendWithAlertOnError(tgChattable tgbotapi.Chattable) {
+func (b *Bot) sendWithAlertOnError(tgChattable tgbotapi.Chattable) bool {
 	if _, err := b.api.Send(tgChattable); err != nil {
 		b.sendAlert(err.Error())
+		return false
 	}
+	return true
 }
 
 func (b *Bot) sendAlert(text string) {

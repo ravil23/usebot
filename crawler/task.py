@@ -46,7 +46,7 @@ class Task(NamedTuple):
                 for tag in BeautifulSoup(data['html'], 'html.parser').find_all(attrs={'class': 'answer'})
                 if len(clean_text(tag.get_text())) != 0
             },
-            doc=data['docHtml'] and BeautifulSoup(data['docHtml'], 'html.parser').get_text().strip(),
+            doc=data['docHtml'] and clean_text(BeautifulSoup(data['docHtml'], 'html.parser').get_text()),
         )
 
     def to_dict(self) -> Dict:
@@ -57,4 +57,5 @@ class Task(NamedTuple):
             'answer': self.answer,
             'options': self.options,
             'themes': self.theme_names,
+            'doc': self.doc,
         }

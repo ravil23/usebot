@@ -10,14 +10,20 @@ import (
 
 const (
 	ExplanationPrefix = "Правильный ответ: "
+
+	LevelLow    = 1
+	LevelMedium = 2
+	LevelHigh   = 3
 )
 
 type Task struct {
-	ID int                    `json:"id"`
-	Type string               `json:"type"`
-	Text string      		  `json:"text"`
-	Answer string             `json:"answer"`
+	ID      int               `json:"id"`
+	Level   int               `json:"level"`
+	Text    string            `json:"text"`
+	Doc     string            `json:"doc"`
+	Answer  string            `json:"answer"`
 	Options map[string]string `json:"options"`
+	Themes  []string          `json:"themes"`
 }
 
 func (t *Task) MakeTelegramPoll(chatID int64) *tgbotapi.SendPollConfig {
@@ -47,6 +53,9 @@ func (t *Task) MakeTelegramPoll(chatID int64) *tgbotapi.SendPollConfig {
 
 func (t *Task) MakeTelegramMessage(chatID int64) *tgbotapi.MessageConfig {
 	tgMessage := tgbotapi.NewMessage(chatID, fmt.Sprintf("<b>#%d\n%s</b>\n", t.ID, t.Text))
+	if t.Doc != "" {
+		tgMessage.Text += "\n" + t.Doc + "\n"
+	}
 	tgMessage.ParseMode = tgbotapi.ModeHTML
 	tgButtons := make([]tgbotapi.InlineKeyboardButton, len(t.Options))
 	for i, key := range t.shuffledOptionKeys() {
