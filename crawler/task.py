@@ -52,7 +52,9 @@ class Task(NamedTuple):
     def to_dict(self) -> Dict:
         return {
             'id': self.id,
+            'level': self.level_id,
             'text': self.text,
             'answer': self.answer,
             'options': self.options,
+            'themes': self.theme_names,
         }
