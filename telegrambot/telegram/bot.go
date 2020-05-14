@@ -30,9 +30,11 @@ const (
 	textSelectSubject = "Что поизучаем?"
 
 	subjectRussian = "Русский язык"
+	subjectHistory = "История"
 )
 
 var userSelectedSubject = map[int]string{}
+var userChat = map[int]int64{}
 
 func GetBotTokenOrPanic() string {
 	botToken := os.Getenv("BOT_TOKEN")
@@ -97,6 +99,8 @@ func (b *Bot) Run() {
 				b.handleMessage(update.Message)
 			} else if update.CallbackQuery != nil {
 				b.handleCallbackQuery(update.CallbackQuery)
+			} else if update.PollAnswer != nil {
+				b.handlePollAnswer(update.PollAnswer)
 			} else {
 				continue
 			}
@@ -115,6 +119,8 @@ func (b *Bot) Run() {
 func (b *Bot) handleMessage(tgMessage *tgbotapi.Message) {
 	chatID := tgMessage.Chat.ID
 	messageID := tgMessage.MessageID
+
+	userChat[tgMessage.From.ID] = chatID
 
 	if tgMessage.Command() == commandStart {
 		b.sendStartMenu(chatID, messageID)
@@ -136,7 +142,7 @@ func (b *Bot) sendStartMenu(chatID int64, messageID int) {
 func (b *Bot) getStartMenu(chatID int64) tgbotapi.Chattable {
 	tgMessage := tgbotapi.NewMessage(
 		chatID,
-		fmt.Sprintf(`Выбери предмет, чтобы начать подготовку, его всегда можно сменить, нажав на кнопку "%s".`, commandSelectSubject),
+		fmt.Sprintf(`Выбери предмет, чтобы начать подготовку. Его всегда можно сменить, нажав на кнопку "%s".`, commandSelectSubject),
 	)
 	tgButtons := []tgbotapi.KeyboardButton{
 		tgbotapi.NewKeyboardButton(commandSelectSubject),
@@ -146,16 +152,18 @@ func (b *Bot) getStartMenu(chatID int64) tgbotapi.Chattable {
 	return &tgMessage
 }
 
-func (b *Bot) handleCallbackQuery(callbackQuery *tgbotapi.CallbackQuery) {
-	chatID := callbackQuery.Message.Chat.ID
-	messageID := callbackQuery.Message.MessageID
+func (b *Bot) handleCallbackQuery(tgCallbackQuery *tgbotapi.CallbackQuery) {
+	chatID := tgCallbackQuery.Message.Chat.ID
+	messageID := tgCallbackQuery.Message.MessageID
 
-	if callbackQuery.Message.Text == textSelectSubject {
-		if b.selectSubject(callbackQuery) {
-			b.sendNextTask(chatID, messageID, callbackQuery.From.ID)
+	userChat[tgCallbackQuery.From.ID] = chatID
+
+	if tgCallbackQuery.Message.Text == textSelectSubject {
+		if b.selectSubject(tgCallbackQuery) {
+			b.sendNextTask(chatID, messageID, tgCallbackQuery.From.ID)
 		}
-	} else if b.updateInlineQuestion(callbackQuery) {
-		b.sendNextTask(chatID, messageID, callbackQuery.From.ID)
+	} else if b.updateInlineQuestion(tgCallbackQuery) {
+		b.sendNextTask(chatID, messageID, tgCallbackQuery.From.ID)
 	}
 }
 
@@ -225,6 +233,7 @@ func (b *Bot) updateInlineQuestion(callbackQuery *tgbotapi.CallbackQuery) bool {
 
 		tgRows := make([][]tgbotapi.InlineKeyboardButton, 0, len(callbackQuery.Message.ReplyMarkup.InlineKeyboard))
 		correctOptionText := "?"
+		hasMistake := false
 		for _, row := range callbackQuery.Message.ReplyMarkup.InlineKeyboard {
 			tgButtons := make([]tgbotapi.InlineKeyboardButton, 0, len(row))
 			for _, button := range row {
@@ -241,10 +250,14 @@ func (b *Bot) updateInlineQuestion(callbackQuery *tgbotapi.CallbackQuery) bool {
 					tgButton.Text += " ✅"
 				} else if *button.CallbackData == callbackQuery.Data {
 					tgButton.Text += " ❌"
+					hasMistake = true
 				}
 				tgButtons = append(tgButtons, tgButton)
 			}
 			tgRows = append(tgRows, tgbotapi.NewInlineKeyboardRow(tgButtons...))
+		}
+		if hasMistake {
+			callbackText = entity.ExplanationPrefix + correctOptionText
 		}
 		tgRows = append(
 			tgRows,
@@ -270,6 +283,13 @@ func (b *Bot) updateInlineQuestion(callbackQuery *tgbotapi.CallbackQuery) bool {
 	return !alreadyAnswered
 }
 
+func (b *Bot) handlePollAnswer(tgPollAnswer *tgbotapi.PollAnswer) {
+	userID := tgPollAnswer.User.ID
+	chatID := userChat[userID]
+
+	b.sendNextTask(chatID, 0, userID)
+}
+
 func (b *Bot) sendSubjectsList(chatID int64, messageID int) {
 	tgChattable := b.getSubjectsList(chatID)
 	if _, err := b.api.Send(tgChattable); err != nil {
@@ -279,10 +299,10 @@ func (b *Bot) sendSubjectsList(chatID int64, messageID int) {
 
 func (b *Bot) getSubjectsList(chatID int64) tgbotapi.Chattable {
 	tgMessage := tgbotapi.NewMessage(chatID, textSelectSubject)
-	tgButtons := []tgbotapi.InlineKeyboardButton {
-		tgbotapi.NewInlineKeyboardButtonData(subjectRussian, subjectRussian),
-	}
-	tgMessage.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(tgButtons)
+	tgMessage.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(subjectRussian, subjectRussian)},
+		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(subjectHistory, subjectHistory)},
+	)
 	return &tgMessage
 }
 
@@ -291,6 +311,8 @@ func (b *Bot) sendNextTask(chatID int64, messageID int, userID int) {
 	switch subject {
 	case subjectRussian:
 		b.sendNextRussianTask(chatID, messageID)
+	case subjectHistory:
+		b.sendNextHistoryTask(chatID, messageID)
 	default:
 		b.sendSubjectsList(chatID, messageID)
 	}
@@ -298,6 +320,13 @@ func (b *Bot) sendNextTask(chatID int64, messageID int, userID int) {
 
 func (b *Bot) sendNextRussianTask(chatID int64, messageID int) {
 	tgChattable := b.getNextTask(b.database.Russian.Tasks, chatID)
+	if _, err := b.api.Send(tgChattable); err != nil {
+		b.sendAlert(chatID, err.Error(), messageID)
+	}
+}
+
+func (b *Bot) sendNextHistoryTask(chatID int64, messageID int) {
+	tgChattable := b.getNextTask(b.database.History.Tasks, chatID)
 	if _, err := b.api.Send(tgChattable); err != nil {
 		b.sendAlert(chatID, err.Error(), messageID)
 	}

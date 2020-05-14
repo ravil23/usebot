@@ -10,9 +10,12 @@ def main(cache_dir: str, output_dir: str, site: str, fipi_session_id: str, force
     if site == SITE_FIPI:
         crawler = FIPICrawler(cache_dir, output_dir, fipi_session_id, force)
         crawler.load_dictionaries()
+
         tasks_subject_russian = crawler.load_subject_russian()
-        # TODO: remove tasks_subject_russian filters
         crawler.save_subject_russian([task for task in tasks_subject_russian if task.type_id == 2 and task.doc is None])
+
+        tasks_subject_history = crawler.load_subject_history()
+        crawler.save_subject_history([task for task in tasks_subject_history if task.type_id == 2 and task.doc is None])
     else:
         raise IllegalArgumentError()
 
