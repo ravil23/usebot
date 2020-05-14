@@ -5,7 +5,7 @@ from typing import Dict, List
 
 import requests
 
-from crawler.task import FIPITask
+from crawler.task import Task
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -43,17 +43,17 @@ class FIPICrawler:
         logging.info(f'Dictionaries loaded from site and cached: {cache_path}')
         return dictionaries
 
-    def load_subject_russian(self) -> List[FIPITask]:
+    def load_subject_russian(self) -> List[Task]:
         return self._load_subject(self.SUBJECT_ID_RUSSIAN, self.TASKS_SUBJECT_RUSSIAN_FILENAME)
 
-    def load_subject_history(self) -> List[FIPITask]:
+    def load_subject_history(self) -> List[Task]:
         return self._load_subject(self.SUBJECT_ID_HISTORY, self.TASKS_SUBJECT_HISTORY_FILENAME)
 
-    def _load_subject(self, subject_id: str, filename: str) -> List[FIPITask]:
+    def _load_subject(self, subject_id: str, filename: str) -> List[Task]:
         cache_path = os.path.join(self.cache_dir, filename)
         if not self.force and os.path.exists(cache_path):
             with open(cache_path, 'r') as f:
-                tasks = [FIPITask.from_response(raw_task) for raw_task in json.load(f)['tasks']]
+                tasks = [Task.from_response(raw_task) for raw_task in json.load(f)['tasks']]
             logging.info(f'{len(tasks)} tasks for subject {subject_id} loaded from cache: {cache_path}')
             return tasks
 
@@ -92,15 +92,15 @@ class FIPICrawler:
 
         self._dump({'tasks': tasks}, cache_path)
         logging.info(f'{len(tasks)} tasks for subject {subject_id} cached: {cache_path}')
-        return [FIPITask.from_response(raw_task) for raw_task in tasks ]
+        return [Task.from_response(raw_task) for raw_task in tasks ]
 
-    def save_subject_russian(self, tasks: List[FIPITask]) -> None:
+    def save_subject_russian(self, tasks: List[Task]) -> None:
         self._save_subject(tasks, self.SUBJECT_ID_RUSSIAN, self.TASKS_SUBJECT_RUSSIAN_FILENAME)
 
-    def save_subject_history(self, tasks: List[FIPITask]) -> None:
+    def save_subject_history(self, tasks: List[Task]) -> None:
         self._save_subject(tasks, self.SUBJECT_ID_HISTORY, self.TASKS_SUBJECT_HISTORY_FILENAME)
 
-    def _save_subject(self, tasks: List[FIPITask], subject_id: str, filename: str) -> None:
+    def _save_subject(self, tasks: List[Task], subject_id: str, filename: str) -> None:
         data = {'tasks': [task.to_dict() for task in tasks]}
         output_path = os.path.join(self.output_dir, filename)
         self._dump(data, output_path)

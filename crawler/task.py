@@ -4,7 +4,7 @@ from typing import Dict, List, NamedTuple, Optional
 from bs4 import BeautifulSoup
 
 
-class FIPITask(NamedTuple):
+class Task(NamedTuple):
     subject_id: int
     level_id: int
     level_name: str
@@ -23,11 +23,11 @@ class FIPITask(NamedTuple):
     doc: Optional[str]
 
     @staticmethod
-    def from_response(data: Dict) -> 'FIPITask':
+    def from_response(data: Dict) -> 'Task':
         def clean_text(text: str) -> str:
             return re.sub(r" +", " ", re.sub(r"MathType.* ", "", text)).strip()
 
-        return FIPITask(
+        return Task(
             subject_id=data['subjectId'],
             level_id=data['levelId'],
             level_name=data['levelName'].strip(),
@@ -44,6 +44,7 @@ class FIPITask(NamedTuple):
             options={
                 tag['number']: clean_text(tag.get_text())
                 for tag in BeautifulSoup(data['html'], 'html.parser').find_all(attrs={'class': 'answer'})
+                if len(clean_text(tag.get_text())) != 0
             },
             doc=data['docHtml'] and BeautifulSoup(data['docHtml'], 'html.parser').get_text().strip(),
         )
@@ -51,7 +52,6 @@ class FIPITask(NamedTuple):
     def to_dict(self) -> Dict:
         return {
             'id': self.id,
-            'type': f'{self.type_name} [{self.type_id}]',
             'text': self.text,
             'answer': self.answer,
             'options': self.options,
