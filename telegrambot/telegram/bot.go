@@ -150,56 +150,33 @@ func (b *Bot) handlePollAnswer(tgPollAnswer *tgbotapi.PollAnswer) {
 }
 
 func (b *Bot) selectSubject(callbackQuery *tgbotapi.CallbackQuery) bool {
-	chatID := callbackQuery.Message.Chat.ID
-	messageID := callbackQuery.Message.MessageID
-
 	userSelectedSubject[callbackQuery.From.ID] = callbackQuery.Data
 
-	alreadyAnswered := callbackQuery.Data == labelAnswered
-	callbackText := ""
-	if alreadyAnswered {
-		callbackText = fmt.Sprintf(`Для смены предмета, воспользуйтесь кнопкой "%s"`, commandSelectSubject)
-	} else {
-		tgKeyboardUpdate := tgbotapi.NewEditMessageText(chatID, messageID, callbackQuery.Message.Text)
-		tgRows := make([][]tgbotapi.InlineKeyboardButton, 0, len(callbackQuery.Message.ReplyMarkup.InlineKeyboard))
-		for _, row := range callbackQuery.Message.ReplyMarkup.InlineKeyboard {
-			tgButtons := make([]tgbotapi.InlineKeyboardButton, 0, len(row))
-			for _, button := range row {
-				if button.CallbackData == nil {
-					continue
-				}
-				tgButton := tgbotapi.NewInlineKeyboardButtonData(button.Text, labelAnswered)
-				if *button.CallbackData == callbackQuery.Data {
-					tgButton.Text += " 📖️"
-				}
-				tgButtons = append(tgButtons, tgButton)
-			}
-			tgRows = append(tgRows, tgbotapi.NewInlineKeyboardRow(tgButtons...))
-		}
-		tgKeyboard := tgbotapi.NewInlineKeyboardMarkup(tgRows...)
-		tgKeyboardUpdate.ReplyMarkup = &tgKeyboard
-		b.sendWithAlertOnError(tgKeyboardUpdate)
-	}
+	popupIfSucceeded := fmt.Sprintf(`Выбран предмет "%s"`, callbackQuery.Data)
+	popupIfAlreadyAnswered := fmt.Sprintf(`Для смены предмета, воспользуйтесь кнопкой "%s"`, commandSelectSubject)
 
-	tgCallback := tgbotapi.NewCallback(callbackQuery.ID, callbackText)
-	if _, err := b.api.Request(tgCallback); err != nil {
-		b.sendAlert(err.Error())
-		return false
-	}
-	return !alreadyAnswered
+	return b.updateMessageAfterSelect(callbackQuery, popupIfSucceeded, popupIfAlreadyAnswered, "📖️")
 }
 
 func (b *Bot) selectLevel(callbackQuery *tgbotapi.CallbackQuery) bool {
+	userSelectedLevel[callbackQuery.From.ID] = callbackQuery.Data
+
+	popupIfSucceeded := fmt.Sprintf(`Выбрана сложность "%s"`, callbackQuery.Data)
+	popupIfAlreadyAnswered := fmt.Sprintf(`Для смены сложности, воспользуйтесь кнопкой "%s"`, commandSelectLevel)
+
+	return b.updateMessageAfterSelect(callbackQuery, popupIfSucceeded, popupIfAlreadyAnswered, "🎓️")
+}
+
+func (b *Bot) updateMessageAfterSelect(callbackQuery *tgbotapi.CallbackQuery, popupIfSucceeded, popupIfAlreadyAnswered, marker string) bool {
 	chatID := callbackQuery.Message.Chat.ID
 	messageID := callbackQuery.Message.MessageID
 
-	userSelectedLevel[callbackQuery.From.ID] = callbackQuery.Data
-
 	alreadyAnswered := callbackQuery.Data == labelAnswered
-	callbackText := ""
+	var popupText string
 	if alreadyAnswered {
-		callbackText = fmt.Sprintf(`Для смены сложности, воспользуйтесь кнопкой "%s"`, commandSelectLevel)
+		popupText = popupIfAlreadyAnswered
 	} else {
+		popupText = popupIfSucceeded
 		tgKeyboardUpdate := tgbotapi.NewEditMessageText(chatID, messageID, callbackQuery.Message.Text)
 		tgRows := make([][]tgbotapi.InlineKeyboardButton, 0, len(callbackQuery.Message.ReplyMarkup.InlineKeyboard))
 		for _, row := range callbackQuery.Message.ReplyMarkup.InlineKeyboard {
@@ -210,7 +187,7 @@ func (b *Bot) selectLevel(callbackQuery *tgbotapi.CallbackQuery) bool {
 				}
 				tgButton := tgbotapi.NewInlineKeyboardButtonData(button.Text, labelAnswered)
 				if *button.CallbackData == callbackQuery.Data {
-					tgButton.Text += " ️🎓"
+					tgButton.Text += " " + marker
 				}
 				tgButtons = append(tgButtons, tgButton)
 			}
@@ -221,11 +198,7 @@ func (b *Bot) selectLevel(callbackQuery *tgbotapi.CallbackQuery) bool {
 		b.sendWithAlertOnError(tgKeyboardUpdate)
 	}
 
-	tgCallback := tgbotapi.NewCallback(callbackQuery.ID, callbackText)
-	if _, err := b.api.Request(tgCallback); err != nil {
-		b.sendAlert(err.Error())
-		return false
-	}
+	b.sendCallback(callbackQuery.ID, popupText)
 	return !alreadyAnswered
 }
 
@@ -234,13 +207,13 @@ func (b *Bot) updateInlineQuestion(callbackQuery *tgbotapi.CallbackQuery) bool {
 	messageID := callbackQuery.Message.MessageID
 
 	alreadyAnswered := false
-	callbackText := ""
+	var popupText string
 	if callbackQuery.Data == labelAnswered {
 		alreadyAnswered = true
-		callbackText = "К сожалению изменить ответ нельзя"
+		popupText = "К сожалению изменить ответ нельзя"
 	} else if strings.HasPrefix(callbackQuery.Data, entity.ExplanationPrefix) {
 		alreadyAnswered = true
-		callbackText = callbackQuery.Data
+		popupText = callbackQuery.Data
 	} else {
 		tgKeyboardUpdate := tgbotapi.NewEditMessageText(chatID, messageID, callbackQuery.Message.Text)
 		endQuestionIndex := strings.Index(tgKeyboardUpdate.Text, "\n\n")
@@ -277,7 +250,7 @@ func (b *Bot) updateInlineQuestion(callbackQuery *tgbotapi.CallbackQuery) bool {
 			tgRows = append(tgRows, tgbotapi.NewInlineKeyboardRow(tgButtons...))
 		}
 		if hasMistake {
-			callbackText = entity.ExplanationPrefix + correctOptionText
+			popupText = entity.ExplanationPrefix + correctOptionText
 		}
 		tgRows = append(
 			tgRows,
@@ -293,11 +266,7 @@ func (b *Bot) updateInlineQuestion(callbackQuery *tgbotapi.CallbackQuery) bool {
 		b.sendWithAlertOnError(tgKeyboardUpdate)
 	}
 
-	tgCallback := tgbotapi.NewCallback(callbackQuery.ID, callbackText)
-	if _, err := b.api.Request(tgCallback); err != nil {
-		b.sendAlert(err.Error())
-		return false
-	}
+	b.sendCallback(callbackQuery.ID, popupText)
 	return !alreadyAnswered
 }
 
@@ -335,7 +304,7 @@ func (b *Bot) getSubjectsList(chatID int64) tgbotapi.Chattable {
 	tgRow := make([]tgbotapi.InlineKeyboardButton, 0)
 	for i := range tgButtons {
 		tgRow = append(tgRow, tgButtons[i])
-		if ((i+1)%2 == 0) || (i+1 == len(tgButtons)) {
+		if (i+1) == len(tgButtons) || (i+1)%2 == 0 {
 			tgRows = append(tgRows, tgRow)
 			tgRow = make([]tgbotapi.InlineKeyboardButton, 0)
 		}
@@ -352,6 +321,15 @@ func (b *Bot) getLevelsList(chatID int64) tgbotapi.Chattable {
 		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(entity.LevelHigh.String(), entity.LevelHigh.String())},
 	)
 	return &tgMessage
+}
+
+func (b *Bot) sendCallback(callbackID, callbackText string) bool {
+	tgCallback := tgbotapi.NewCallback(callbackID, callbackText)
+	if _, err := b.api.Request(tgCallback); err != nil {
+		b.sendAlert(err.Error())
+		return false
+	}
+	return true
 }
 
 func (b *Bot) sendNextTask(chatID int64, userID int) {
@@ -402,7 +380,7 @@ func (b *Bot) getNextTask(tasks []*entity.Task, chatID int64) tgbotapi.Chattable
 
 func (b *Bot) sendWithAlertOnError(tgChattable tgbotapi.Chattable) bool {
 	if _, err := b.api.Send(tgChattable); err != nil {
-		b.sendAlert(err.Error())
+		b.sendAlert(fmt.Sprintf("Error on sending %v: %s", tgChattable, err))
 		return false
 	}
 	return true

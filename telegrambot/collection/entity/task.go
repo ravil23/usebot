@@ -90,7 +90,7 @@ func (t *Task) MakeTelegramMessage(chatID int64) *tgbotapi.MessageConfig {
 }
 
 func (t *Task) getTitle() string {
-	return fmt.Sprintf("#%d %s", t.ID, t.Level)
+	return fmt.Sprintf("#%d %s сложность", t.ID, t.Level)
 }
 
 func (t *Task) shuffledOptionKeys() []string {

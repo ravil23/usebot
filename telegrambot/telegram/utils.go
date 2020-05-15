@@ -16,8 +16,8 @@ const (
 
 	labelAnswered = "answered"
 
-	textSelectSubject = "Выберите предмет"
-	textSelectLevel   = "Выберите сложность"
+	textSelectSubject = "Список доступных предметов"
+	textSelectLevel   = "Варианты уровней сложности"
 
 	alertsChatID = -1001436548831
 
