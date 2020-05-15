@@ -23,11 +23,11 @@ const (
 func (l Level) String() string {
 	switch l {
 	case LevelLow:
-		return "Базовый"
+		return "Базовая"
 	case LevelMedium:
-		return "Повышенный"
+		return "Повышенная"
 	case LevelHigh:
-		return "Высокий"
+		return "Высокая"
 	default:
 		return ""
 	}
@@ -44,7 +44,11 @@ type Task struct {
 }
 
 func (t *Task) MakeTelegramPoll(chatID int64) *tgbotapi.SendPollConfig {
-	if len(t.Text) > 255 {
+	if t.Doc != "" {
+		return nil
+	}
+	tgText := fmt.Sprintf("%s\n%s", t.getTitle(), t.Text)
+	if len(tgText) > 255 {
 		return nil
 	}
 	var correctOptionID int64 = -1
@@ -60,7 +64,7 @@ func (t *Task) MakeTelegramPoll(chatID int64) *tgbotapi.SendPollConfig {
 		tgOptions = append(tgOptions, option)
 	}
 
-	tgPoll := tgbotapi.NewPoll(chatID, fmt.Sprintf("%s\n%s", t.getTitle(), t.Text), tgOptions...)
+	tgPoll := tgbotapi.NewPoll(chatID, tgText, tgOptions...)
 	tgPoll.Explanation = ExplanationPrefix + t.Options[t.Answer]
 	tgPoll.CorrectOptionID = correctOptionID
 	tgPoll.Type = "quiz"

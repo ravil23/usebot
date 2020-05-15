@@ -7,6 +7,42 @@ import (
 	"sort"
 )
 
+const (
+	SubjectNameRussian      = "Русский язык"
+	SubjectNameMathAdvanced = "Математика (профильный)"
+	SubjectNameMathBasic    = "Математика (базовый)"
+	SubjectNamePhysics      = "Физика"
+	SubjectNameChemistry    = "Химия"
+	SubjectNameIT           = "Информатика и ИКТ"
+	SubjectNameBiology      = "Биология"
+	SubjectNameHistory      = "История"
+	SubjectNameGeography    = "География"
+	SubjectNameEnglish      = "Английский"
+	SubjectNameGerman       = "Немецкий"
+	SubjectNameFrench       = "Французский"
+	SubjectNameSocial       = "Обществознание"
+	SubjectNameSpanish      = "Испанский"
+	SubjectNameLiterature   = "Литература"
+)
+
+var AllSubjectNames = []string{
+	SubjectNameRussian,
+	SubjectNameMathAdvanced,
+	SubjectNameMathBasic,
+	SubjectNamePhysics,
+	SubjectNameChemistry,
+	SubjectNameIT,
+	SubjectNameBiology,
+	SubjectNameHistory,
+	SubjectNameGeography,
+	SubjectNameEnglish,
+	SubjectNameGerman,
+	SubjectNameFrench,
+	SubjectNameSocial,
+	SubjectNameSpanish,
+	SubjectNameLiterature,
+}
+
 type Subject struct {
 	Tasks []*Task `json:"tasks"`
 
@@ -17,14 +53,8 @@ type Subject struct {
 }
 
 func (s *Subject) show() {
-	log.Printf("Tasks count: %d", len(s.Tasks))
-	log.Printf("Low level tasks count: %d", len(s.LowLevelTasks))
-	log.Printf("Medium level tasks count: %d", len(s.MediumLevelTasks))
-	log.Printf("High level tasks count: %d", len(s.HighLevelTasks))
+	log.Printf("Tasks count: %d (%d low, %d medium, %d high)", len(s.Tasks), len(s.LowLevelTasks), len(s.MediumLevelTasks), len(s.HighLevelTasks))
 	log.Printf("Themes count: %d", len(s.AllThemes))
-	for _, theme := range s.AllThemes {
-		log.Printf("- %s", theme)
-	}
 }
 
 func (s *Subject) extractAllThemes() {

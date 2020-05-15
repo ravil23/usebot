@@ -11,11 +11,13 @@ def main(cache_dir: str, output_dir: str, site: str, fipi_session_id: str, force
         crawler = FIPICrawler(cache_dir, output_dir, fipi_session_id, force)
         crawler.load_dictionaries()
 
-        tasks_subject_russian = crawler.load_subject_russian()
-        crawler.save_subject_russian([task for task in tasks_subject_russian if task.type_id == 2])
-
-        tasks_subject_history = crawler.load_subject_history()
-        crawler.save_subject_history([task for task in tasks_subject_history if task.type_id == 2])
+        subjects = crawler.load_subjects()
+        for subject_id, tasks in subjects.items():
+            crawler.save_subject(
+                [task for task in tasks if task.type_id == 2],
+                subject_id,
+                crawler.SUBJECT_FILENAMES[subject_id]
+            )
     else:
         raise IllegalArgumentError()
 

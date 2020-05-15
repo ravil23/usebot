@@ -9,18 +9,15 @@ import (
 )
 
 const (
-	commandSelectSubject = "Выбрать предмет"
-	commandSelectLevel   = "Выбрать сложность"
+	commandSelectSubject = "Предмет"
+	commandSelectLevel   = "Сложность"
 	commandSkip          = "Пропустить"
 	commandStart         = "start"
 
 	labelAnswered = "answered"
 
-	textSelectSubject = "Что поизучаем?"
-	textSelectLevel   = "Какую сложность выберем?"
-
-	subjectRussian = "Русский язык"
-	subjectHistory = "История"
+	textSelectSubject = "Выберите предмет"
+	textSelectLevel   = "Выберите сложность"
 
 	alertsChatID = -1001436548831
 

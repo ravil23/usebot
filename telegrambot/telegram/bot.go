@@ -317,10 +317,30 @@ func (b *Bot) getStartMenu(chatID int64) tgbotapi.Chattable {
 
 func (b *Bot) getSubjectsList(chatID int64) tgbotapi.Chattable {
 	tgMessage := tgbotapi.NewMessage(chatID, textSelectSubject)
-	tgMessage.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
-		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(subjectRussian, subjectRussian)},
-		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(subjectHistory, subjectHistory)},
-	)
+	tgRows := make([][]tgbotapi.InlineKeyboardButton, 0, len(entity.AllSubjectNames))
+	// TODO: fill empty subjects and remove this filter
+	skipSubjectNames := make(map[string]struct{})
+	for name, subject := range b.database.Subjects {
+		if len(subject.Tasks) == 0 {
+			skipSubjectNames[name] = struct{}{}
+		}
+	}
+	tgButtons := make([]tgbotapi.InlineKeyboardButton, 0, len(entity.AllSubjectNames))
+	for _, subjectName := range entity.AllSubjectNames {
+		if _, found := skipSubjectNames[subjectName]; found {
+			continue
+		}
+		tgButtons = append(tgButtons, tgbotapi.NewInlineKeyboardButtonData(subjectName, subjectName))
+	}
+	tgRow := make([]tgbotapi.InlineKeyboardButton, 0)
+	for i := range tgButtons {
+		tgRow = append(tgRow, tgButtons[i])
+		if ((i+1)%2 == 0) || (i+1 == len(tgButtons)) {
+			tgRows = append(tgRows, tgRow)
+			tgRow = make([]tgbotapi.InlineKeyboardButton, 0)
+		}
+	}
+	tgMessage.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(tgRows...)
 	return &tgMessage
 }
 
@@ -336,15 +356,12 @@ func (b *Bot) getLevelsList(chatID int64) tgbotapi.Chattable {
 
 func (b *Bot) sendNextTask(chatID int64, userID int) {
 	for {
-		subject := userSelectedSubject[userID]
+		subjectName := userSelectedSubject[userID]
 		level := userSelectedLevel[userID]
 		var task tgbotapi.Chattable
-		switch subject {
-		case subjectRussian:
-			task = b.getNextTaskByLevel(b.database.Russian, chatID, level)
-		case subjectHistory:
-			task = b.getNextTaskByLevel(b.database.History, chatID, level)
-		default:
+		if subject, found := b.database.Subjects[subjectName]; found {
+			task = b.getNextTaskByLevel(subject, chatID, level)
+		} else {
 			task = b.getSubjectsList(chatID)
 		}
 		if b.sendWithAlertOnError(task) {
