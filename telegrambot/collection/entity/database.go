@@ -48,7 +48,6 @@ func NewDatabase(
 
 func (d *Database) Show() {
 	for name, subject := range d.Subjects {
-		log.Printf("Subject: %s", name)
-		subject.show()
+		log.Printf("%s: %s", name, subject)
 	}
 }

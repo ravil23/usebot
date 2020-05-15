@@ -2,6 +2,7 @@ package entity
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"sort"
@@ -52,9 +53,11 @@ type Subject struct {
 	AllThemes        []string `json:"-"`
 }
 
-func (s *Subject) show() {
-	log.Printf("Tasks count: %d (%d low, %d medium, %d high)", len(s.Tasks), len(s.LowLevelTasks), len(s.MediumLevelTasks), len(s.HighLevelTasks))
-	log.Printf("Themes count: %d", len(s.AllThemes))
+func (s *Subject) String() string {
+	return fmt.Sprintf(
+		"Subject{Tasks: %d (%d low, %d medium, %d high), Themes: %d}",
+		len(s.Tasks), len(s.LowLevelTasks), len(s.MediumLevelTasks), len(s.HighLevelTasks), len(s.AllThemes),
+	)
 }
 
 func (s *Subject) extractAllThemes() {
