@@ -22,10 +22,10 @@ heroku login
 
 Start Telegram bot:
 ```
-heroku ps:scale -a usebot telegrambot=1
+heroku ps:scale -a use-bot telegrambot=1
 ```
 
 Stop Telegram bot:
 ```
-heroku ps:stop -a usebot telegrambot
+heroku ps:stop -a use-bot telegrambot
 ```

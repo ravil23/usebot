@@ -1,9 +1,7 @@
 version: "3.7"
 services:
   telegrambot:
-    build: ./telegrambot
+    build: .
     environment:
       BOT_TOKEN: "${BOT_TOKEN}"
-    volumes:
-      - "./data:/data"
     restart: unless-stopped
