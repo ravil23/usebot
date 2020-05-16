@@ -16,7 +16,11 @@ def main(cache_dir: str, output_dir: str, site: str, fipi_session_id: str, force
                 [
                     task
                     for task in tasks
-                    if task.type_id == 2 and len(task.text) <= 500 and '=' not in task.text and len(task.options) == 4
+                    if task.type_id == 2
+                    and len(task.text) <= 500
+                    and '=' not in task.text
+                    and len(task.options) == 4
+                    and not (task.subject_id == 3 and any(requirement.startswith("2.4 ") for requirement in task.requirements))
                 ],
                 subject_id,
                 crawler.SUBJECT_FILENAMES[subject_id]

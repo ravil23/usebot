@@ -20,9 +20,9 @@ const (
 	textSelectSubject = "Список доступных предметов"
 	textSelectLevel   = "Варианты уровней сложности"
 
-	alertsChatID = -1001436548831
+	AlertsChatID = -1001436548831
 
-	botName = "GIA11Bot"
+	Bot11Name = "GIA11Bot"
 )
 
 var userSelectedSubject = map[int]string{}

@@ -9,8 +9,8 @@ class Task(NamedTuple):
     level_id: int
     level_name: str
     answer: str
-    theme_names: List[str]
-    requirement_names: List[str]
+    themes: List[str]
+    requirements: List[str]
     img_url: Optional[str]
 
     id: int
@@ -32,8 +32,8 @@ class Task(NamedTuple):
             level_id=data['levelId'],
             level_name=data['levelName'].strip(),
             answer=data['answer'].strip(),
-            theme_names=data['themeNames'],
-            requirement_names=data['requirementNames'],
+            themes=data['themeNames'],
+            requirements=data['requirementNames'],
             img_url=data['imgUrl'],
             id=data['id'],
             type_id=data['taskTypeId'],
@@ -57,7 +57,8 @@ class Task(NamedTuple):
             'text': self.text,
             'answer': self.answer,
             'options': self.options,
-            'themes': self.theme_names,
+            'themes': self.themes,
+            'requirements': self.requirements,
             'doc': self.doc,
             'sendAsPoll': (
                 len(self.text) <= 255 and

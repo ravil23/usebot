@@ -99,12 +99,32 @@ func (b *Bot) Run() {
 	b.serve()
 }
 
+func (b *Bot) TestAllTasks(chatID int64) {
+	log.Printf("Bot is sending all tasks to chat %d", chatID)
+
+	for name, subject := range b.database.Subjects {
+		log.Printf("%s: %s", name, subject)
+		for _, task := range subject.Tasks {
+			var tgChattable tgbotapi.Chattable
+			if task.SendAsPoll {
+				tgChattable = task.MakeTelegramPoll(chatID)
+			} else {
+				tgChattable = task.MakeTelegramMessage(chatID)
+			}
+			if _, err := b.api.Send(tgChattable); err != nil {
+				b.sendAlert(fmt.Sprintf("Error on sending %v: %s", tgChattable, err))
+				panic(err)
+			}
+		}
+	}
+}
+
 func (b *Bot) serve() {
-	b.sendAlert(fmt.Sprintf("@%s started", botName))
+	b.sendAlert(fmt.Sprintf("@%s started", Bot11Name))
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 	<-signals
-	b.sendAlert(fmt.Sprintf("@%s stopped", botName))
+	b.sendAlert(fmt.Sprintf("@%s stopped", Bot11Name))
 }
 
 func (b *Bot) handleMessage(tgMessage *tgbotapi.Message) {
@@ -115,7 +135,7 @@ func (b *Bot) handleMessage(tgMessage *tgbotapi.Message) {
 	if tgMessage.Command() == commandStart {
 		b.sendWithAlertOnError(b.getStartMenu(chatID))
 		b.sendWithAlertOnError(b.getSubjectsList(chatID))
-		b.sendAlert(fmt.Sprintf("%s started conversation with @%s", formatUserString(tgMessage.From), botName))
+		b.sendAlert(fmt.Sprintf("%s started conversation with @%s", formatUserString(tgMessage.From), Bot11Name))
 	} else if tgMessage.Text == commandSelectSubject {
 		b.sendWithAlertOnError(b.getSubjectsList(chatID))
 	} else if tgMessage.Text == commandSelectLevel {
@@ -393,7 +413,7 @@ func (b *Bot) sendWithAlertOnError(tgChattable tgbotapi.Chattable) bool {
 
 func (b *Bot) sendAlert(text string) {
 	log.Print(text)
-	tgMessage := tgbotapi.NewMessage(alertsChatID, fmt.Sprintf("[%s] %s", b.hostName, text))
+	tgMessage := tgbotapi.NewMessage(AlertsChatID, fmt.Sprintf("[%s] %s", b.hostName, text))
 	_, err := b.api.Send(tgMessage)
 	if err != nil {
 		log.Printf("Error on sending alert: %s", err)

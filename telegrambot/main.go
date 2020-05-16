@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"os"
 
@@ -23,6 +24,7 @@ var frenchSubjectPath string
 var socialSubjectPath string
 var spanishSubjectPath string
 var literatureSubjectPath string
+var test bool
 
 func init() {
 	russianSubjectPath = os.Getenv("SUBJECT_RUSSIAN")
@@ -40,9 +42,11 @@ func init() {
 	socialSubjectPath = os.Getenv("SUBJECT_SOCIAL")
 	spanishSubjectPath = os.Getenv("SUBJECT_SPANISH")
 	literatureSubjectPath = os.Getenv("SUBJECT_LITERATURE")
+	flag.BoolVar(&test, "test", false, "Send all tasks to alerts channel for testing")
 }
 
 func parseArguments() {
+	flag.Parse()
 	if russianSubjectPath == "" ||
 		mathAdvancedSubjectPath == "" ||
 		mathBasicSubjectPath == "" ||
@@ -87,6 +91,10 @@ func main() {
 
 	bot := telegram.NewBot(database)
 	bot.Init()
+	if test {
+		bot.TestAllTasks(telegram.AlertsChatID)
+		return
+	}
 	bot.HealthCheck()
 	bot.Run()
 }

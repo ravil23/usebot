@@ -36,14 +36,15 @@ func (l Level) String() string {
 }
 
 type Task struct {
-	ID         int               `json:"id"`
-	Level      Level             `json:"level"`
-	Text       string            `json:"text"`
-	Doc        string            `json:"doc"`
-	Answer     string            `json:"answer"`
-	Options    map[string]string `json:"options"`
-	Themes     []string          `json:"themes"`
-	SendAsPoll bool              `json:"sendAsPoll"`
+	ID           int               `json:"id"`
+	Level        Level             `json:"level"`
+	Text         string            `json:"text"`
+	Doc          string            `json:"doc"`
+	Answer       string            `json:"answer"`
+	Options      map[string]string `json:"options"`
+	Themes       []string          `json:"themes"`
+	Requirements []string          `json:"requirements"`
+	SendAsPoll   bool              `json:"sendAsPoll"`
 }
 
 func (t *Task) String() string {
