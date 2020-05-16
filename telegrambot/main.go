@@ -44,7 +44,21 @@ func init() {
 
 func parseArguments() {
 	flag.Parse()
-	if russianSubjectPath == "" {
+	if russianSubjectPath == "" ||
+		mathAdvancedSubjectPath == "" ||
+		mathBasicSubjectPath == "" ||
+		physicsSubjectPath == "" ||
+		chemistrySubjectPath == "" ||
+		itSubjectPath == "" ||
+		biologySubjectPath == "" ||
+		historySubjectPath == "" ||
+		geographySubjectPath == "" ||
+		englishSubjectPath == "" ||
+		germanSubjectPath == "" ||
+		frenchSubjectPath == "" ||
+		socialSubjectPath == "" ||
+		spanishSubjectPath == "" ||
+		literatureSubjectPath == "" {
 		flag.Usage()
 		os.Exit(2)
 	}
