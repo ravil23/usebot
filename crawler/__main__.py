@@ -13,7 +13,11 @@ def main(cache_dir: str, output_dir: str, site: str, fipi_session_id: str, force
         subjects = crawler.load_subjects()
         for subject_id, tasks in subjects.items():
             crawler.save_subject(
-                [task for task in tasks if task.type_id == 2 and len(task.text) <= 500 and '=' not in task.text],
+                [
+                    task
+                    for task in tasks
+                    if task.type_id == 2 and len(task.text) <= 500 and '=' not in task.text and len(task.options) == 4
+                ],
                 subject_id,
                 crawler.SUBJECT_FILENAMES[subject_id]
             )
