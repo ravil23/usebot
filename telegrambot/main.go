@@ -45,7 +45,7 @@ func init() {
 }
 
 func parseArguments() {
-	log.Printf(strings.Join(flag.Args(), ", "))
+	log.Printf("Arguments: [%s]", strings.Join(flag.Args(), ", "))
 	flag.Parse()
 	if russianSubjectPath == "" ||
 		mathAdvancedSubjectPath == "" ||
