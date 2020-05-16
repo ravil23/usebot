@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/ravil23/usebot/telegrambot/collection/entity"
+	"github.com/ravil23/usebot/telegrambot/collection"
 	"github.com/ravil23/usebot/telegrambot/telegram"
 )
 
@@ -66,7 +66,7 @@ func parseArguments() {
 func main() {
 	parseArguments()
 
-	database := entity.NewDatabase(
+	database := collection.NewDatabase(
 		russianSubjectPath,
 		mathAdvancedSubjectPath,
 		mathBasicSubjectPath,

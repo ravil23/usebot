@@ -13,7 +13,7 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
-	"github.com/ravil23/usebot/telegrambot/collection/entity"
+	"github.com/ravil23/usebot/telegrambot/collection"
 )
 
 const (
@@ -27,10 +27,10 @@ const (
 type Bot struct {
 	hostName string
 	api      *tgbotapi.BotAPI
-	database *entity.Database
+	database *collection.Database
 }
 
-func NewBot(database *entity.Database) *Bot {
+func NewBot(database *collection.Database) *Bot {
 	hostName, err := os.Hostname()
 	if err != nil {
 		hostName = "unknown_host"
@@ -212,7 +212,7 @@ func (b *Bot) updateInlineQuestion(callbackQuery *tgbotapi.CallbackQuery) bool {
 	if callbackQuery.Data == labelAnswered {
 		alreadyAnswered = true
 		popupText = "К сожалению изменить ответ нельзя"
-	} else if strings.HasPrefix(callbackQuery.Data, entity.ExplanationPrefix) {
+	} else if strings.HasPrefix(callbackQuery.Data, collection.ExplanationPrefix) {
 		alreadyAnswered = true
 		tgMessage := tgbotapi.NewMessage(chatID, fmt.Sprintf("<b>%s</b>\n%s", textExplanation, callbackQuery.Data))
 		tgMessage.ReplyToMessageID = messageID
@@ -254,14 +254,14 @@ func (b *Bot) updateInlineQuestion(callbackQuery *tgbotapi.CallbackQuery) bool {
 			tgRows = append(tgRows, tgbotapi.NewInlineKeyboardRow(tgButtons...))
 		}
 		if hasMistake {
-			popupText = entity.ExplanationPrefix + correctOptionText
+			popupText = collection.ExplanationPrefix + correctOptionText
 		}
 		tgRows = append(
 			tgRows,
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData(
 					textExplanation,
-					entity.ExplanationPrefix+correctOptionText,
+					collection.ExplanationPrefix+correctOptionText,
 				),
 			),
 		)
@@ -290,7 +290,7 @@ func (b *Bot) getStartMenu(chatID int64) tgbotapi.Chattable {
 
 func (b *Bot) getSubjectsList(chatID int64) tgbotapi.Chattable {
 	tgMessage := tgbotapi.NewMessage(chatID, textSelectSubject)
-	tgRows := make([][]tgbotapi.InlineKeyboardButton, 0, len(entity.AllSubjectNames))
+	tgRows := make([][]tgbotapi.InlineKeyboardButton, 0, len(collection.AllSubjectNames))
 	// TODO: fill empty subjects and remove this filter
 	skipSubjectNames := make(map[string]struct{})
 	for name, subject := range b.database.Subjects {
@@ -298,8 +298,8 @@ func (b *Bot) getSubjectsList(chatID int64) tgbotapi.Chattable {
 			skipSubjectNames[name] = struct{}{}
 		}
 	}
-	tgButtons := make([]tgbotapi.InlineKeyboardButton, 0, len(entity.AllSubjectNames))
-	for _, subjectName := range entity.AllSubjectNames {
+	tgButtons := make([]tgbotapi.InlineKeyboardButton, 0, len(collection.AllSubjectNames))
+	for _, subjectName := range collection.AllSubjectNames {
 		if _, found := skipSubjectNames[subjectName]; found {
 			continue
 		}
@@ -320,9 +320,9 @@ func (b *Bot) getSubjectsList(chatID int64) tgbotapi.Chattable {
 func (b *Bot) getLevelsList(chatID int64) tgbotapi.Chattable {
 	tgMessage := tgbotapi.NewMessage(chatID, textSelectLevel)
 	tgMessage.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
-		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(entity.LevelLow.String(), entity.LevelLow.String())},
-		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(entity.LevelMedium.String(), entity.LevelMedium.String())},
-		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(entity.LevelHigh.String(), entity.LevelHigh.String())},
+		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(collection.LevelLow.String(), collection.LevelLow.String())},
+		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(collection.LevelMedium.String(), collection.LevelMedium.String())},
+		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(collection.LevelHigh.String(), collection.LevelHigh.String())},
 	)
 	return &tgMessage
 }
@@ -359,19 +359,19 @@ func (b *Bot) sendNextTask(chatID int64, userID int) {
 	}
 }
 
-func (b *Bot) getNextTaskByLevel(subject *entity.Subject, chatID int64, level string) tgbotapi.Chattable {
+func (b *Bot) getNextTaskByLevel(subject *collection.Subject, chatID int64, level string) tgbotapi.Chattable {
 	switch level {
-	case entity.LevelHigh.String():
+	case collection.LevelHigh.String():
 		if len(subject.HighLevelTasks) > 0 {
 			return b.getNextTask(subject.HighLevelTasks, chatID)
 		}
 		fallthrough
-	case entity.LevelMedium.String():
+	case collection.LevelMedium.String():
 		if len(subject.MediumLevelTasks) > 0 {
 			return b.getNextTask(subject.MediumLevelTasks, chatID)
 		}
 		fallthrough
-	case entity.LevelLow.String():
+	case collection.LevelLow.String():
 		if len(subject.LowLevelTasks) > 0 {
 			return b.getNextTask(subject.LowLevelTasks, chatID)
 		}
@@ -381,7 +381,7 @@ func (b *Bot) getNextTaskByLevel(subject *entity.Subject, chatID int64, level st
 	}
 }
 
-func (b *Bot) getNextTask(tasks []*entity.Task, chatID int64) tgbotapi.Chattable {
+func (b *Bot) getNextTask(tasks []*collection.Task, chatID int64) tgbotapi.Chattable {
 	task := tasks[rand.Intn(len(tasks))]
 	if tgPoll := task.MakeTelegramPoll(chatID); tgPoll != nil {
 		return tgPoll
