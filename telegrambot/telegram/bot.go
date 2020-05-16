@@ -21,6 +21,7 @@ const (
 	initializationMaxRetriesCount = 30
 	timeoutSeconds                = 60
 	listenersPoolSize             = 10
+	delayBetweenQuestions         = time.Second
 )
 
 type Bot struct {
@@ -131,14 +132,14 @@ func (b *Bot) handleCallbackQuery(tgCallbackQuery *tgbotapi.CallbackQuery) {
 
 	if tgCallbackQuery.Message.Text == textSelectSubject {
 		if b.selectSubject(tgCallbackQuery) {
-			b.sendNextTask(chatID, tgCallbackQuery.From.ID)
+			b.sendNextTaskWithDelay(chatID, tgCallbackQuery.From.ID)
 		}
 	} else if tgCallbackQuery.Message.Text == textSelectLevel {
 		if b.selectLevel(tgCallbackQuery) {
-			b.sendNextTask(chatID, tgCallbackQuery.From.ID)
+			b.sendNextTaskWithDelay(chatID, tgCallbackQuery.From.ID)
 		}
 	} else if b.updateInlineQuestion(tgCallbackQuery) {
-		b.sendNextTask(chatID, tgCallbackQuery.From.ID)
+		b.sendNextTaskWithDelay(chatID, tgCallbackQuery.From.ID)
 	}
 }
 
@@ -146,7 +147,7 @@ func (b *Bot) handlePollAnswer(tgPollAnswer *tgbotapi.PollAnswer) {
 	userID := tgPollAnswer.User.ID
 	chatID := userChat[userID]
 
-	b.sendNextTask(chatID, userID)
+	b.sendNextTaskWithDelay(chatID, userID)
 }
 
 func (b *Bot) selectSubject(callbackQuery *tgbotapi.CallbackQuery) bool {
@@ -333,6 +334,13 @@ func (b *Bot) sendCallback(callbackID, callbackText string) bool {
 		return false
 	}
 	return true
+}
+
+func (b *Bot) sendNextTaskWithDelay(chatID int64, userID int) {
+	go func() {
+		time.Sleep(delayBetweenQuestions)
+		b.sendNextTask(chatID, userID)
+	}()
 }
 
 func (b *Bot) sendNextTask(chatID int64, userID int) {
