@@ -1,7 +1,9 @@
 package collection
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"math/rand"
 	"strconv"
 
@@ -34,23 +36,26 @@ func (l Level) String() string {
 }
 
 type Task struct {
-	ID      int               `json:"id"`
-	Level   Level             `json:"level"`
-	Text    string            `json:"text"`
-	Doc     string            `json:"doc"`
-	Answer  string            `json:"answer"`
-	Options map[string]string `json:"options"`
-	Themes  []string          `json:"themes"`
+	ID         int               `json:"id"`
+	Level      Level             `json:"level"`
+	Text       string            `json:"text"`
+	Doc        string            `json:"doc"`
+	Answer     string            `json:"answer"`
+	Options    map[string]string `json:"options"`
+	Themes     []string          `json:"themes"`
+	SendAsPoll bool              `json:"sendAsPoll"`
+}
+
+func (t *Task) String() string {
+	if data, err := json.Marshal(t); err == nil {
+		return string(data)
+	} else {
+		return fmt.Sprintf("Task{ID: %d}", t.ID)
+	}
 }
 
 func (t *Task) MakeTelegramPoll(chatID int64) *tgbotapi.SendPollConfig {
-	if t.Doc != "" {
-		return nil
-	}
-	tgText := fmt.Sprintf("%s\n%s", t.getTitle(), t.Text)
-	if len(tgText) > 255 {
-		return nil
-	}
+	log.Printf("Make poll to chat %d from task: %s", chatID, t)
 	var correctOptionID int64 = -1
 	tgOptions := make([]string, 0, len(t.Options))
 	for i, key := range t.shuffledOptionKeys() {
@@ -58,13 +63,9 @@ func (t *Task) MakeTelegramPoll(chatID int64) *tgbotapi.SendPollConfig {
 			correctOptionID = int64(i)
 		}
 		option := t.Options[key]
-		if len(option) > 100 {
-			return nil
-		}
 		tgOptions = append(tgOptions, option)
 	}
-
-	tgPoll := tgbotapi.NewPoll(chatID, tgText, tgOptions...)
+	tgPoll := tgbotapi.NewPoll(chatID, t.Text, tgOptions...)
 	tgPoll.Explanation = ExplanationPrefix + t.Options[t.Answer]
 	tgPoll.CorrectOptionID = correctOptionID
 	tgPoll.Type = "quiz"
@@ -73,7 +74,8 @@ func (t *Task) MakeTelegramPoll(chatID int64) *tgbotapi.SendPollConfig {
 }
 
 func (t *Task) MakeTelegramMessage(chatID int64) *tgbotapi.MessageConfig {
-	tgMessage := tgbotapi.NewMessage(chatID, fmt.Sprintf("<b>%s\n%s</b>\n", t.getTitle(), t.Text))
+	log.Printf("Make message to chat %d from task: %s", chatID, t)
+	tgMessage := tgbotapi.NewMessage(chatID, fmt.Sprintf("<b>%s</b>\n", t.Text))
 	if t.Doc != "" {
 		tgMessage.Text += "\n" + t.Doc + "\n"
 	}
@@ -87,10 +89,6 @@ func (t *Task) MakeTelegramMessage(chatID int64) *tgbotapi.MessageConfig {
 	}
 	tgMessage.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(tgButtons)
 	return &tgMessage
-}
-
-func (t *Task) getTitle() string {
-	return fmt.Sprintf("#%d %s сложность", t.ID, t.Level)
 }
 
 func (t *Task) shuffledOptionKeys() []string {

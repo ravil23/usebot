@@ -291,16 +291,9 @@ func (b *Bot) getStartMenu(chatID int64) tgbotapi.Chattable {
 func (b *Bot) getSubjectsList(chatID int64) tgbotapi.Chattable {
 	tgMessage := tgbotapi.NewMessage(chatID, textSelectSubject)
 	tgRows := make([][]tgbotapi.InlineKeyboardButton, 0, len(collection.AllSubjectNames))
-	// TODO: fill empty subjects and remove this filter
-	skipSubjectNames := make(map[string]struct{})
-	for name, subject := range b.database.Subjects {
-		if len(subject.Tasks) == 0 {
-			skipSubjectNames[name] = struct{}{}
-		}
-	}
 	tgButtons := make([]tgbotapi.InlineKeyboardButton, 0, len(collection.AllSubjectNames))
 	for _, subjectName := range collection.AllSubjectNames {
-		if _, found := skipSubjectNames[subjectName]; found {
+		if subject, found := b.database.Subjects[subjectName]; found && len(subject.Tasks) == 0 {
 			continue
 		}
 		tgButtons = append(tgButtons, tgbotapi.NewInlineKeyboardButtonData(subjectName, subjectName))
@@ -383,10 +376,11 @@ func (b *Bot) getNextTaskByLevel(subject *collection.Subject, chatID int64, leve
 
 func (b *Bot) getNextTask(tasks []*collection.Task, chatID int64) tgbotapi.Chattable {
 	task := tasks[rand.Intn(len(tasks))]
-	if tgPoll := task.MakeTelegramPoll(chatID); tgPoll != nil {
-		return tgPoll
+	if task.SendAsPoll {
+		return task.MakeTelegramPoll(chatID)
+	} else {
+		return task.MakeTelegramMessage(chatID)
 	}
-	return task.MakeTelegramMessage(chatID)
 }
 
 func (b *Bot) sendWithAlertOnError(tgChattable tgbotapi.Chattable) bool {

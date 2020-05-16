@@ -59,4 +59,10 @@ class Task(NamedTuple):
             'options': self.options,
             'themes': self.theme_names,
             'doc': self.doc,
+            'sendAsPoll': (
+                len(self.text) <= 255 and
+                self.doc is not None and
+                all(len(option) <= 100
+                    for option in self.options.values())
+            )
         }

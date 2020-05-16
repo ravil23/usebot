@@ -6,7 +6,6 @@ SITE_FIPI = "fipi"
 
 
 def main(cache_dir: str, output_dir: str, site: str, fipi_session_id: str, force: bool) -> None:
-    crawler = None
     if site == SITE_FIPI:
         crawler = FIPICrawler(cache_dir, output_dir, fipi_session_id, force)
         crawler.load_dictionaries()
@@ -14,12 +13,13 @@ def main(cache_dir: str, output_dir: str, site: str, fipi_session_id: str, force
         subjects = crawler.load_subjects()
         for subject_id, tasks in subjects.items():
             crawler.save_subject(
-                [task for task in tasks if task.type_id == 2],
+                [task for task in tasks if task.type_id == 2 and len(task.text) <= 500 and '=' not in task.text],
                 subject_id,
                 crawler.SUBJECT_FILENAMES[subject_id]
             )
     else:
-        raise IllegalArgumentError()
+        raise ValueError(f'invalid site: {site}')
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Load tasks.')
