@@ -140,7 +140,7 @@ func (b *Bot) handleMessage(tgMessage *tgbotapi.Message) {
 		b.sendWithAlertOnError(b.getSubjectsList(chatID))
 	} else if tgMessage.Text == commandSelectLevel {
 		b.sendWithAlertOnError(b.getLevelsList(chatID))
-	} else {
+	} else if tgMessage.Text == commandNext {
 		b.sendNextTask(chatID, tgMessage.From.ID)
 	}
 }
@@ -152,22 +152,18 @@ func (b *Bot) handleCallbackQuery(tgCallbackQuery *tgbotapi.CallbackQuery) {
 
 	if tgCallbackQuery.Message.Text == textSelectSubject {
 		if b.selectSubject(tgCallbackQuery) {
-			b.sendNextTaskWithDelay(chatID, tgCallbackQuery.From.ID)
+			b.sendNextTask(chatID, tgCallbackQuery.From.ID)
 		}
 	} else if tgCallbackQuery.Message.Text == textSelectLevel {
 		if b.selectLevel(tgCallbackQuery) {
-			b.sendNextTaskWithDelay(chatID, tgCallbackQuery.From.ID)
+			b.sendNextTask(chatID, tgCallbackQuery.From.ID)
 		}
-	} else if b.updateInlineQuestion(tgCallbackQuery) {
-		b.sendNextTaskWithDelay(chatID, tgCallbackQuery.From.ID)
+	} else {
+		b.updateInlineQuestion(tgCallbackQuery)
 	}
 }
 
-func (b *Bot) handlePollAnswer(tgPollAnswer *tgbotapi.PollAnswer) {
-	userID := tgPollAnswer.User.ID
-	chatID := userChat[userID]
-
-	b.sendNextTaskWithDelay(chatID, userID)
+func (b *Bot) handlePollAnswer(_ *tgbotapi.PollAnswer) {
 }
 
 func (b *Bot) selectSubject(callbackQuery *tgbotapi.CallbackQuery) bool {
@@ -302,7 +298,7 @@ func (b *Bot) getStartMenu(chatID int64) tgbotapi.Chattable {
 	tgButtons := []tgbotapi.KeyboardButton{
 		tgbotapi.NewKeyboardButton(commandSelectSubject),
 		tgbotapi.NewKeyboardButton(commandSelectLevel),
-		tgbotapi.NewKeyboardButton(commandSkip),
+		tgbotapi.NewKeyboardButton(commandNext),
 	}
 	tgMessage.ReplyMarkup = tgbotapi.NewReplyKeyboard(tgButtons)
 	return &tgMessage

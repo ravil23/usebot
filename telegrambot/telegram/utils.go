@@ -11,7 +11,7 @@ import (
 const (
 	commandSelectSubject = "Предмет"
 	commandSelectLevel   = "Сложность"
-	commandSkip          = "Пропустить"
+	commandNext          = "Продолжить"
 	commandStart         = "start"
 
 	labelAnswered = "answered"
