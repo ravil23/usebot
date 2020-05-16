@@ -27,21 +27,22 @@ func NewDatabase(
 ) *Database {
 
 	return &Database{
-		Subjects: map[string]*Subject{SubjectNameRussian: parseSubjectFileOrPanic(russianSubjectPath),
-			SubjectNameMathAdvanced: parseSubjectFileOrPanic(mathAdvancedSubjectPath),
-			SubjectNameMathBasic:    parseSubjectFileOrPanic(mathBasicSubjectPath),
-			SubjectNamePhysics:      parseSubjectFileOrPanic(physicsSubjectPath),
-			SubjectNameChemistry:    parseSubjectFileOrPanic(chemistrySubjectPath),
-			SubjectNameIT:           parseSubjectFileOrPanic(itSubjectPath),
-			SubjectNameBiology:      parseSubjectFileOrPanic(biologySubjectPath),
-			SubjectNameHistory:      parseSubjectFileOrPanic(historySubjectPath),
-			SubjectNameGeography:    parseSubjectFileOrPanic(geographySubjectPath),
-			SubjectNameEnglish:      parseSubjectFileOrPanic(englishSubjectPath),
-			SubjectNameGerman:       parseSubjectFileOrPanic(germanSubjectPath),
-			SubjectNameFrench:       parseSubjectFileOrPanic(frenchSubjectPath),
-			SubjectNameSocial:       parseSubjectFileOrPanic(socialSubjectPath),
-			SubjectNameSpanish:      parseSubjectFileOrPanic(spanishSubjectPath),
-			SubjectNameLiterature:   parseSubjectFileOrPanic(literatureSubjectPath),
+		Subjects: map[string]*Subject{
+			SubjectNameRussian:      parseSubjectFileOrPanic(SubjectNameRussian, russianSubjectPath),
+			SubjectNameMathAdvanced: parseSubjectFileOrPanic(SubjectNameMathAdvanced, mathAdvancedSubjectPath),
+			SubjectNameMathBasic:    parseSubjectFileOrPanic(SubjectNameMathBasic, mathBasicSubjectPath),
+			SubjectNamePhysics:      parseSubjectFileOrPanic(SubjectNamePhysics, physicsSubjectPath),
+			SubjectNameChemistry:    parseSubjectFileOrPanic(SubjectNameChemistry, chemistrySubjectPath),
+			SubjectNameIT:           parseSubjectFileOrPanic(SubjectNameIT, itSubjectPath),
+			SubjectNameBiology:      parseSubjectFileOrPanic(SubjectNameBiology, biologySubjectPath),
+			SubjectNameHistory:      parseSubjectFileOrPanic(SubjectNameHistory, historySubjectPath),
+			SubjectNameGeography:    parseSubjectFileOrPanic(SubjectNameGeography, geographySubjectPath),
+			SubjectNameEnglish:      parseSubjectFileOrPanic(SubjectNameEnglish, englishSubjectPath),
+			SubjectNameGerman:       parseSubjectFileOrPanic(SubjectNameGerman, germanSubjectPath),
+			SubjectNameFrench:       parseSubjectFileOrPanic(SubjectNameFrench, frenchSubjectPath),
+			SubjectNameSocial:       parseSubjectFileOrPanic(SubjectNameSocial, socialSubjectPath),
+			SubjectNameSpanish:      parseSubjectFileOrPanic(SubjectNameSpanish, spanishSubjectPath),
+			SubjectNameLiterature:   parseSubjectFileOrPanic(SubjectNameLiterature, literatureSubjectPath),
 		},
 	}
 }

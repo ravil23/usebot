@@ -47,6 +47,7 @@ var AllSubjectNames = []string{
 type Subject struct {
 	Tasks []*Task `json:"tasks"`
 
+	Name             string   `json:"-"`
 	LowLevelTasks    []*Task  `json:"-"`
 	MediumLevelTasks []*Task  `json:"-"`
 	HighLevelTasks   []*Task  `json:"-"`
@@ -92,7 +93,7 @@ func (s *Subject) groupTasksByLevels() {
 	}
 }
 
-func parseSubjectFile(path string) (*Subject, error) {
+func parseSubjectFile(name, path string) (*Subject, error) {
 	jsonData, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -104,11 +105,15 @@ func parseSubjectFile(path string) (*Subject, error) {
 	}
 	subject.extractAllThemes()
 	subject.groupTasksByLevels()
+	for _, task := range subject.Tasks {
+		task.SubjectName = name
+	}
+	subject.Name = name
 	return &subject, nil
 }
 
-func parseSubjectFileOrPanic(path string) *Subject {
-	subject, err := parseSubjectFile(path)
+func parseSubjectFileOrPanic(name, path string) *Subject {
+	subject, err := parseSubjectFile(name, path)
 	if err != nil {
 		log.Panic(err)
 	}
