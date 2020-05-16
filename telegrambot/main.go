@@ -2,7 +2,9 @@ package main
 
 import (
 	"flag"
+	"log"
 	"os"
+	"strings"
 
 	"github.com/ravil23/usebot/telegrambot/collection/entity"
 	"github.com/ravil23/usebot/telegrambot/telegram"
@@ -43,6 +45,7 @@ func init() {
 }
 
 func parseArguments() {
+	log.Printf(strings.Join(flag.Args(), ", "))
 	flag.Parse()
 	if russianSubjectPath == "" ||
 		mathAdvancedSubjectPath == "" ||
