@@ -1,10 +1,8 @@
 package main
 
 import (
-	"flag"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/ravil23/usebot/telegrambot/collection/entity"
 	"github.com/ravil23/usebot/telegrambot/telegram"
@@ -27,26 +25,24 @@ var spanishSubjectPath string
 var literatureSubjectPath string
 
 func init() {
-	flag.StringVar(&russianSubjectPath, "russian", "", "Database of Russian subject tasks")
-	flag.StringVar(&mathAdvancedSubjectPath, "math-advanced", "", "Database of Advanced Math subject tasks")
-	flag.StringVar(&mathBasicSubjectPath, "math-basic", "", "Database of Basic Math subject tasks")
-	flag.StringVar(&physicsSubjectPath, "physics", "", "Database of Physics subject tasks")
-	flag.StringVar(&chemistrySubjectPath, "chemistry", "", "Database of Chemistry subject tasks")
-	flag.StringVar(&itSubjectPath, "it", "", "Database of IT subject tasks")
-	flag.StringVar(&biologySubjectPath, "biology", "", "Database of Biology subject tasks")
-	flag.StringVar(&historySubjectPath, "history", "", "Database of History subject tasks")
-	flag.StringVar(&geographySubjectPath, "geography", "", "Database of Geography subject tasks")
-	flag.StringVar(&englishSubjectPath, "english", "", "Database of English subject tasks")
-	flag.StringVar(&germanSubjectPath, "german", "", "Database of German subject tasks")
-	flag.StringVar(&frenchSubjectPath, "french", "", "Database of French subject tasks")
-	flag.StringVar(&socialSubjectPath, "social", "", "Database of Social subject tasks")
-	flag.StringVar(&spanishSubjectPath, "spanish", "", "Database of Spanish subject tasks")
-	flag.StringVar(&literatureSubjectPath, "literature", "", "Database of Literature subject tasks")
+	russianSubjectPath = os.Getenv("SUBJECT_RUSSIAN")
+	mathAdvancedSubjectPath = os.Getenv("SUBJECT_MATH_ADVANCED")
+	mathBasicSubjectPath = os.Getenv("SUBJECT_MATH_BASIC")
+	physicsSubjectPath = os.Getenv("SUBJECT_PHYSICS")
+	chemistrySubjectPath = os.Getenv("SUBJECT_CHEMISTRY")
+	itSubjectPath = os.Getenv("SUBJECT_IT")
+	biologySubjectPath = os.Getenv("SUBJECT_BIOLOGY")
+	historySubjectPath = os.Getenv("SUBJECT_HISTORY")
+	geographySubjectPath = os.Getenv("SUBJECT_GEOGRAPHY")
+	englishSubjectPath = os.Getenv("SUBJECT_ENGLISH")
+	germanSubjectPath = os.Getenv("SUBJECT_GERMAN")
+	frenchSubjectPath = os.Getenv("SUBJECT_FRENCH")
+	socialSubjectPath = os.Getenv("SUBJECT_SOCIAL")
+	spanishSubjectPath = os.Getenv("SUBJECT_SPANISH")
+	literatureSubjectPath = os.Getenv("SUBJECT_LITERATURE")
 }
 
 func parseArguments() {
-	log.Printf("Arguments: [%s]", strings.Join(flag.Args(), ", "))
-	flag.Parse()
 	if russianSubjectPath == "" ||
 		mathAdvancedSubjectPath == "" ||
 		mathBasicSubjectPath == "" ||
@@ -62,7 +58,7 @@ func parseArguments() {
 		socialSubjectPath == "" ||
 		spanishSubjectPath == "" ||
 		literatureSubjectPath == "" {
-		flag.Usage()
+		log.Printf("Some of subject paths are empty")
 		os.Exit(2)
 	}
 }
