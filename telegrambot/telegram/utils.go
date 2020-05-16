@@ -16,6 +16,7 @@ const (
 
 	labelAnswered = "answered"
 
+	textExplanation   = "Пояснение"
 	textSelectSubject = "Список доступных предметов"
 	textSelectLevel   = "Варианты уровней сложности"
 

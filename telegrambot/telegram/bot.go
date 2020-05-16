@@ -213,7 +213,10 @@ func (b *Bot) updateInlineQuestion(callbackQuery *tgbotapi.CallbackQuery) bool {
 		popupText = "К сожалению изменить ответ нельзя"
 	} else if strings.HasPrefix(callbackQuery.Data, entity.ExplanationPrefix) {
 		alreadyAnswered = true
-		popupText = callbackQuery.Data
+		tgMessage := tgbotapi.NewMessage(chatID, fmt.Sprintf("<b>%s</b>\n%s", textExplanation, callbackQuery.Data))
+		tgMessage.ReplyToMessageID = messageID
+		tgMessage.ParseMode = tgbotapi.ModeHTML
+		b.sendWithAlertOnError(tgMessage)
 	} else {
 		tgKeyboardUpdate := tgbotapi.NewEditMessageText(chatID, messageID, callbackQuery.Message.Text)
 		endQuestionIndex := strings.Index(tgKeyboardUpdate.Text, "\n\n")
@@ -256,7 +259,7 @@ func (b *Bot) updateInlineQuestion(callbackQuery *tgbotapi.CallbackQuery) bool {
 			tgRows,
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData(
-					"Пояснение",
+					textExplanation,
 					entity.ExplanationPrefix+correctOptionText,
 				),
 			),
