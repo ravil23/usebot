@@ -37,7 +37,30 @@ func getBotTokenOrPanic() string {
 	return botToken
 }
 
-func formatUserString(tgUser *tgbotapi.User) string {
+func getWelcomeText(tgUser *tgbotapi.User) string {
+	userString := formatUserStringPretty(tgUser)
+	var welcomeText string
+	if userString == "" {
+		welcomeText = "Привет, любознательный незнакомец!"
+	} else {
+		welcomeText = fmt.Sprintf("Привет, %s!", userString)
+	}
+	welcomeText += "\nВыбери предмет, чтобы начать подготовку."
+	return welcomeText
+}
+
+func formatUserStringPretty(tgUser *tgbotapi.User) string {
+	userString := ""
+	if tgUser.LastName != "" {
+		userString = tgUser.LastName + " " + userString
+	}
+	if tgUser.FirstName != "" {
+		userString = tgUser.FirstName + " " + userString
+	}
+	return userString
+}
+
+func formatUserStringVerbose(tgUser *tgbotapi.User) string {
 	userString := fmt.Sprintf("[id=%d]", tgUser.ID)
 	if tgUser.UserName != "" {
 		userString = "@" + tgUser.UserName + " " + userString

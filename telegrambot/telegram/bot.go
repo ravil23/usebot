@@ -21,7 +21,6 @@ const (
 	initializationMaxRetriesCount = 30
 	timeoutSeconds                = 60
 	listenersPoolSize             = 10
-	delayBetweenQuestions         = time.Second
 )
 
 type Bot struct {
@@ -129,13 +128,16 @@ func (b *Bot) serve() {
 
 func (b *Bot) handleMessage(tgMessage *tgbotapi.Message) {
 	chatID := tgMessage.Chat.ID
+	userID := tgMessage.From.ID
 
-	userChat[tgMessage.From.ID] = chatID
+	if _, found := userChat[userID]; !found {
+		b.sendWithAlertOnError(b.getStartMenu(chatID, tgMessage.From))
+	}
+	userChat[userID] = chatID
 
 	if tgMessage.Command() == commandStart {
-		b.sendWithAlertOnError(b.getStartMenu(chatID))
 		b.sendWithAlertOnError(b.getSubjectsList(chatID))
-		b.sendAlert(fmt.Sprintf("%s started conversation with @%s", formatUserString(tgMessage.From), Bot11Name))
+		b.sendAlert(fmt.Sprintf("%s started conversation with @%s", formatUserStringVerbose(tgMessage.From), Bot11Name))
 	} else if tgMessage.Text == commandSelectSubject {
 		b.sendWithAlertOnError(b.getSubjectsList(chatID))
 	} else if tgMessage.Text == commandSelectLevel {
@@ -290,11 +292,8 @@ func (b *Bot) updateInlineQuestion(callbackQuery *tgbotapi.CallbackQuery) bool {
 	return !alreadyAnswered
 }
 
-func (b *Bot) getStartMenu(chatID int64) tgbotapi.Chattable {
-	tgMessage := tgbotapi.NewMessage(
-		chatID,
-		fmt.Sprintf(`Выбери предмет, чтобы начать подготовку. Его всегда можно сменить, нажав на кнопку "%s".`, commandSelectSubject),
-	)
+func (b *Bot) getStartMenu(chatID int64, tgUser *tgbotapi.User) tgbotapi.Chattable {
+	tgMessage := tgbotapi.NewMessage(chatID, getWelcomeText(tgUser))
 	tgButtons := []tgbotapi.KeyboardButton{
 		tgbotapi.NewKeyboardButton(commandSelectSubject),
 		tgbotapi.NewKeyboardButton(commandSelectLevel),
@@ -343,13 +342,6 @@ func (b *Bot) sendCallback(callbackID, callbackText string) bool {
 		return false
 	}
 	return true
-}
-
-func (b *Bot) sendNextTaskWithDelay(chatID int64, userID int) {
-	go func() {
-		time.Sleep(delayBetweenQuestions)
-		b.sendNextTask(chatID, userID)
-	}()
 }
 
 func (b *Bot) sendNextTask(chatID int64, userID int) {
