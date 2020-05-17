@@ -50,10 +50,7 @@ func getWelcomeText(tgUser *tgbotapi.User) string {
 }
 
 func formatUserStringPretty(tgUser *tgbotapi.User) string {
-	userString := ""
-	if tgUser.LastName != "" {
-		userString = tgUser.LastName + " " + userString
-	}
+	userString := tgUser.LastName
 	if tgUser.FirstName != "" {
 		userString = tgUser.FirstName + " " + userString
 	}
